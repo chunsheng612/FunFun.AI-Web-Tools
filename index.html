@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 工具百寶箱 | 方方老師版 (Google Sheet)</title>
+    <title>AI 工具百寶箱 | Liquid Pro Edition</title>
     <meta name="description" content="一個由 Google Sheet 動態更新的 AI 工具平台，整合常用 AI、簡報製作、AI 生圖與學習手冊。">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
@@ -14,11 +14,10 @@
         @property --angle-2 { syntax: "<angle>"; inherits: false; initial-value: -45deg; }
 
         :root {
-            --lg-bg-color: rgba(255, 255, 255, 0.1); --lg-highlight: rgba(255, 255, 255, 0.5);
             --lg-text: #ffffff; --global--size: clamp(0.9rem, 2vw, 1.1rem);
             --anim--hover-time: 400ms; --anim--hover-ease: cubic-bezier(0.25, 1, 0.5, 1);
             --spacing-medium: 16px; --spacing-large: 32px; --spacing-xlarge: 64px;
-            --border-radius-medium: 1.5rem;
+            --border-radius-medium: 28px; /* 配合新特效的圓角 */
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html { height: 100%; }
@@ -29,9 +28,10 @@
             background-size: cover; background-attachment: fixed;
             -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; overflow-x: hidden;
         }
+        #tsparticles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; }
         h1, h2, h3, h4 { color: var(--lg-text); text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); font-weight: 700; }
         .site-title { font-size: clamp(1.5rem, 4vw, 2rem); margin: 0; }
-        .main-section-title { font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: var(--spacing-large); text-align: center; }
+        .main-section-title { font-size: clamp(1.8rem, 4vw, 2.5rem); margin-bottom: var(--spacing-large); text-align: center; transition: opacity 0.3s ease; }
         p { color: rgba(255, 255, 255, 0.85); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
         .container { width: 90%; max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
         main { flex-grow: 1; width: 100%; padding: var(--spacing-xlarge) 0; }
@@ -41,13 +41,32 @@
         .header-logo-image { height: 50px; width: auto; border-radius: 50%; object-fit: cover; }
         .site-footer { width: 100%; padding: var(--spacing-medium); text-align: center; }
         .site-footer .container { justify-content: center; }
-        .glass-container { position: relative; background: transparent; border-radius: var(--border-radius-medium); overflow: hidden; box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 0, 0, 0.1); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .glass-filter, .glass-overlay, .glass-specular { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
-        .glass-filter { z-index: 0; backdrop-filter: blur(12px) saturate(120%); }
-        .glass-overlay { z-index: 1; background: var(--lg-bg-color); }
-        .glass-specular { z-index: 2; box-shadow: inset 1px 1px 0 var(--lg-highlight), inset -1px -1px 0 rgba(0,0,0,0.1); }
+
+        /* --- 新增：優化後的液態玻璃特效 --- */
+        .glass-container {
+            position: relative;
+            border-radius: var(--border-radius-medium);
+            isolation: isolate; /* 關鍵屬性，確保偽元素在容器內 */
+            box-shadow: 0px 6px 21px -8px rgba(0, 0, 0, 0.5);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .glass-container::before {
+            content: ''; position: absolute; inset: 0; z-index: 0;
+            border-radius: inherit;
+            box-shadow: inset 0 0 12px -4px rgba(255, 255, 255, 0.3);
+            background-color: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+        }
+        .glass-container::after {
+            content: ''; position: absolute; inset: 0; z-index: -1;
+            border-radius: inherit;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            filter: url(#glass-distortion); -webkit-filter: url(#glass-distortion);
+            pointer-events: none;
+        }
+
         .tool-card { display: flex; flex-direction: column; height: 100%; }
-        .card-content { position: relative; z-index: 3; padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-content { position: relative; z-index: 2; padding: 1.5rem; flex-grow: 1; display: flex; flex-direction: column; }
         .tool-name { font-size: 1.25rem; margin-bottom: 0.5rem; }
         .tool-description { font-size: 0.9rem; flex-grow: 1; margin-bottom: 1.5rem; }
         .card-buttons { margin-top: auto; display: flex; flex-wrap: wrap; gap: var(--spacing-medium); }
@@ -68,68 +87,41 @@
         button::after { content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 999vw; width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width)); top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2); padding: var(--border-width); box-sizing: border-box; background: conic-gradient(from var(--angle-1) at 50% 50%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 5% 40%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 60% 95%, rgba(0, 0, 0, 0.5)), linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease; box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5); }
         button:hover::after { --angle-1: -125deg; }
         button:active::after { --angle-1: -75deg; }
-        
-        /* 卡片互動特效 */
-        @keyframes subtle-shake {
-            0% { transform: translateY(-5px) scale(1.02) rotate(0deg); }
-            33% { transform: translateY(-5px) scale(1.02) rotate(-1.5deg); }
-            66% { transform: translateY(-5px) scale(1.02) rotate(1.5deg); }
-            100% { transform: translateY(-5px) scale(1.02) rotate(0deg); }
-        }
-        .interactive-card.glass-container::before {
-            content: ""; position: absolute; top: 0; left: -150%; width: 70%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-            transform: skewX(-25deg); transition: left 0.8s cubic-bezier(0.23, 1, 0.32, 1); z-index: 3;
-        }
-        .interactive-card.glass-container:hover {
-            animation: subtle-shake 0.5s ease-out;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 0, 0, 0.2);
-            transform: translateY(-5px) scale(1.02);
-        }
-        .interactive-card.glass-container:hover::before { left: 150%; }
-
-        /* --- Header 導覽按鈕樣式 --- */
-        .site-navigation {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-medium);
-        }
-
-        /* --- 響應式調整：在小螢幕上讓 Header 內容垂直堆疊 --- */
-        @media (max-width: 992px) {
-            .site-header .container {
-                flex-direction: column;
-                gap: var(--spacing-large);
-            }
-            .site-navigation {
-                flex-wrap: wrap; /* 允許按鈕換行 */
-                justify-content: center; /* 置中按鈕 */
-            }
-        }
+        @keyframes subtle-shake { 0% { transform: translateY(-5px) scale(1.02) rotate(0deg); } 33% { transform: translateY(-5px) scale(1.02) rotate(-1.5deg); } 66% { transform: translateY(-5px) scale(1.02) rotate(1.5deg); } 100% { transform: translateY(-5px) scale(1.02) rotate(0deg); } }
+        .interactive-card.glass-container::before { z-index: 1; /* Raise tint layer above content layer's z-index 0 */ }
+        .interactive-card.glass-container .card-content { z-index: 2; }
+        .interactive-card.glass-container::after { z-index: 0; }
+        .interactive-card.glass-container:hover { animation: subtle-shake 0.5s ease-out; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 0, 0, 0.2); transform: translateY(-5px) scale(1.02); }
+        .site-navigation { display: flex; align-items: center; gap: var(--spacing-medium); }
+        @media (max-width: 992px) { .site-header .container { flex-direction: column; gap: var(--spacing-large); } .site-navigation { flex-wrap: wrap; justify-content: center; } }
     </style>
 </head>
 <body>
+    <!-- SVG Filter Definition -->
+    <svg width="0" height="0" style="position: absolute;">
+        <defs>
+            <filter id="glass-distortion" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.01 0.01" numOctaves="2" seed="5" result="noise" />
+                <feDisplacementMap in="SourceGraphic" in2="noise" scale="50" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+        </defs>
+    </svg>
+
+    <!-- Particles Container -->
+    <div id="tsparticles"></div>
     
     <header class="site-header glass-container">
-        <div class="glass-filter"></div><div class="glass-overlay"></div><div class="glass-specular"></div>
         <div class="container">
-            <!-- 左側的品牌 Logo + 標題 -->
             <div class="site-branding">
                 <img src="方方老師空白背景.png" alt="方方老師 Logo" class="header-logo-image">
                 <h1 class="site-title">AI 工具百寶箱</h1>
             </div>
-
-            <!-- 右側的導覽按鈕 -->
             <nav class="site-navigation">
                 <div class="button-wrap">
-                    <button onclick="window.open('https://www.facebook.com/FunFun.AI.Teacher/', '_blank')">
-                        <span>方方老師的個人網站</span>
-                    </button>
+                    <button onclick="window.open('https://www.facebook.com/FunFun.AI.Teacher/', '_blank')"><span>方方老師的個人網站</span></button>
                 </div>
                 <div class="button-wrap">
-                    <button onclick="window.open('https://chunsheng612.github.io/FunFun.AI-Website/', '_blank')">
-                        <span>方方老師的教育網站</span>
-                    </button>
+                    <button onclick="window.open('https://chunsheng612.github.io/FunFun.AI-Website/', '_blank')"><span>方方老師的教育網站</span></button>
                 </div>
             </nav>
         </div>
@@ -139,7 +131,6 @@
         <section id="tools">
             <div class="container">
                 <h2 class="main-section-title">AI 工具總覽</h2>
-
                  <div id="tool-controls">
                     <div id="tool-filters">
                         <div class="button-wrap"><button data-filter="all"><span>顯示全部</span></button></div>
@@ -155,7 +146,6 @@
                          <input type="text" id="search-input" placeholder="搜尋工具...">
                     </div>
                  </div>
-
                 <div class="tool-grid" id="tool-grid">
                     <h2 style="text-align: center; grid-column: 1 / -1;">正在從 Google Sheet 載入資料...</h2>
                 </div>
@@ -164,16 +154,36 @@
     </main>
 
     <footer class="site-footer glass-container">
-        <div class="glass-filter"></div><div class="glass-overlay"></div><div class="glass-specular"></div>
         <div class="container">
             <p>© AI 工具百寶箱. All Rights Reserved.</p>
         </div>
     </footer>
-
+    
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@3.4.0/tsparticles.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzeeOpI74o-BeIbmA9Syf_RQMeyP6ofgsnXhTapgh78r2cLQcf4Oj-2FOAFaMCK2h-0/exec';
             const toolGrid = document.getElementById('tool-grid');
+            
+            // --- 粒子特效設定 ---
+            tsParticles.load({
+                id: "tsparticles",
+                options: {
+                    fpsLimit: 60,
+                    background: { color: { value: "transparent" } },
+                    particles: {
+                        number: { value: 30, density: { enable: true, area: 800 } },
+                        color: { value: ["#ffffff", "#a7a7d1"] },
+                        shape: { type: "circle" },
+                        opacity: { value: { min: 0.1, max: 0.4 } },
+                        size: { value: { min: 1, max: 3 } },
+                        links: { enable: true, distance: 150, color: "#ffffff", opacity: 0.1, width: 1 },
+                        move: { enable: true, speed: 1, direction: "none", random: true, straight: false, outModes: { default: "out" } }
+                    },
+                    interactivity: { events: { onHover: { enable: true, mode: "bubble" } }, modes: { bubble: { distance: 200, size: 5, duration: 2, opacity: 1 } } },
+                    detectRetina: true,
+                },
+            });
 
             async function loadTools() {
                 try {
@@ -182,24 +192,20 @@
                     const tools = await response.json();
                     
                     toolGrid.innerHTML = '';
-                    if (tools.length === 0) {
-                        toolGrid.innerHTML = '<h2 style="text-align: center; grid-column: 1 / -1;">找不到工具資料。</h2>';
+                    if (!tools || tools.length === 0) {
+                        toolGrid.innerHTML = '<h2 style="text-align: center; grid-column: 1 / -1;">找不到工具資料或表格為空。</h2>';
                         return;
                     }
 
                     tools.forEach(tool => {
                         let manualButtonHTML = '';
                         if (tool.ManualURL && tool.ManualURL.trim() !== '') {
-                            manualButtonHTML = `
-                                <div class="button-wrap">
-                                    <button onclick="window.open('${tool.ManualURL}', '_blank')"><span>學習手冊</span></button>
-                                </div>`;
+                            manualButtonHTML = `<div class="button-wrap"><button onclick="window.open('${tool.ManualURL}', '_blank')"><span>學習手冊</span></button></div>`;
                         }
-
-                        // 將 interactive-card class 添加到所有卡片上
+                        
+                        // 注意：卡片HTML結構已簡化，移除了舊的 glass-* divs
                         const cardHTML = `
                             <div class="tool-card glass-container interactive-card" data-category="${tool.Category}">
-                                <div class="glass-filter"></div><div class="glass-overlay"></div><div class="glass-specular"></div>
                                 <div class="card-content">
                                     <h4 class="tool-name">${tool.Name}</h4>
                                     <p class="tool-description">${tool.Description}</p>
@@ -224,6 +230,7 @@
             function initializeFiltering() {
                 const filterContainer = document.getElementById('tool-filters');
                 const searchInput = document.getElementById('search-input');
+                const mainTitle = document.querySelector('.main-section-title');
                 const toolCards = document.querySelectorAll('.tool-card'); 
 
                 function filterAndSearchTools() {
@@ -249,6 +256,19 @@
                         if (clickedButton) {
                             filterButtons.forEach(button => button.classList.remove('active'));
                             clickedButton.classList.add('active');
+                            
+                            // --- 動態標題變更 ---
+                            const buttonText = clickedButton.querySelector('span').textContent;
+                            mainTitle.style.opacity = 0; // 淡出
+                            setTimeout(() => {
+                                if (clickedButton.dataset.filter === 'all') {
+                                    mainTitle.textContent = 'AI 工具總覽';
+                                } else {
+                                    mainTitle.textContent = buttonText;
+                                }
+                                mainTitle.style.opacity = 1; // 淡入
+                            }, 150);
+
                             filterAndSearchTools();
                         }
                     });
