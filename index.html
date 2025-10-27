@@ -68,50 +68,43 @@
         button::after { content: ""; position: absolute; z-index: 1; inset: 0; border-radius: 999vw; width: calc(100% + var(--border-width)); height: calc(100% + var(--border-width)); top: calc(0% - var(--border-width) / 2); left: calc(0% - var(--border-width) / 2); padding: var(--border-width); box-sizing: border-box; background: conic-gradient(from var(--angle-1) at 50% 50%, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0) 5% 40%, rgba(0, 0, 0, 0.5) 50%, rgba(0, 0, 0, 0) 60% 95%, rgba(0, 0, 0, 0.5)), linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.5)); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; transition: all var(--anim--hover-time) var(--anim--hover-ease), --angle-1 500ms ease; box-shadow: inset 0 0 0 calc(var(--border-width) / 2) rgba(255, 255, 255, 0.5); }
         button:hover::after { --angle-1: -125deg; }
         button:active::after { --angle-1: -75deg; }
-                /* --- 新增的卡片互動特效 --- */
         
-        /* 1. 定義一個微幅晃動的動畫 */
+        /* 卡片互動特效 */
         @keyframes subtle-shake {
             0% { transform: translateY(-5px) scale(1.02) rotate(0deg); }
             33% { transform: translateY(-5px) scale(1.02) rotate(-1.5deg); }
             66% { transform: translateY(-5px) scale(1.02) rotate(1.5deg); }
             100% { transform: translateY(-5px) scale(1.02) rotate(0deg); }
         }
-        
-        /* 2. 為 interactive-card 準備一個偽元素來做光影 */
         .interactive-card.glass-container::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: -150%; /* 預設藏在左邊外面 */
-            width: 70%;
-            height: 100%;
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255, 255, 255, 0.25), /* 光影的顏色和透明度 */
-                transparent
-            );
-            transform: skewX(-25deg); /* 讓光影傾斜 */
-            transition: left 0.8s cubic-bezier(0.23, 1, 0.32, 1); /* 光影移動的動畫 */
-            z-index: 3; /* 確保光影在玻璃之上，在內容之下 */
+            content: ""; position: absolute; top: 0; left: -150%; width: 70%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+            transform: skewX(-25deg); transition: left 0.8s cubic-bezier(0.23, 1, 0.32, 1); z-index: 3;
         }
-        
-        /* 3. 當滑鼠懸停在卡片上時觸發所有效果 */
         .interactive-card.glass-container:hover {
-            /* 觸發晃動動畫 */
             animation: subtle-shake 0.5s ease-out;
-            
-            /* 讓卡片稍微變亮和陰影更明顯 */
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 30px rgba(0, 0, 0, 0.2);
-            
-            /* 讓卡片本身有一個輕微的提升感 (動畫中已包含) */
             transform: translateY(-5px) scale(1.02);
         }
-        
-        /* 4. 當滑鼠懸停時，讓光影掃過 */
-        .interactive-card.glass-container:hover::before {
-            left: 150%; /* 將光影移動到右邊外面，完成掃過效果 */
+        .interactive-card.glass-container:hover::before { left: 150%; }
+
+        /* --- Header 導覽按鈕樣式 --- */
+        .site-navigation {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-medium);
+        }
+
+        /* --- 響應式調整：在小螢幕上讓 Header 內容垂直堆疊 --- */
+        @media (max-width: 992px) {
+            .site-header .container {
+                flex-direction: column;
+                gap: var(--spacing-large);
+            }
+            .site-navigation {
+                flex-wrap: wrap; /* 允許按鈕換行 */
+                justify-content: center; /* 置中按鈕 */
+            }
         }
     </style>
 </head>
@@ -120,10 +113,25 @@
     <header class="site-header glass-container">
         <div class="glass-filter"></div><div class="glass-overlay"></div><div class="glass-specular"></div>
         <div class="container">
+            <!-- 左側的品牌 Logo + 標題 -->
             <div class="site-branding">
                 <img src="方方老師空白背景.png" alt="方方老師 Logo" class="header-logo-image">
                 <h1 class="site-title">AI 工具百寶箱</h1>
             </div>
+
+            <!-- 右側的導覽按鈕 -->
+            <nav class="site-navigation">
+                <div class="button-wrap">
+                    <button onclick="window.open('https://www.facebook.com/FunFun.AI.Teacher/', '_blank')">
+                        <span>方方老師的個人網站</span>
+                    </button>
+                </div>
+                <div class="button-wrap">
+                    <button onclick="window.open('https://chunsheng612.github.io/FunFun.AI-Website/', '_blank')">
+                        <span>方方老師的教育網站</span>
+                    </button>
+                </div>
+            </nav>
         </div>
     </header>
 
@@ -148,7 +156,6 @@
                     </div>
                  </div>
 
-                <!-- The tool grid will be populated by JavaScript -->
                 <div class="tool-grid" id="tool-grid">
                     <h2 style="text-align: center; grid-column: 1 / -1;">正在從 Google Sheet 載入資料...</h2>
                 </div>
@@ -165,44 +172,34 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- 1. 設定您的 API 網址 ---
-            // 將下面的 '' 替換成您在步驟 2 中複製的網頁應用程式 URL
             const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzeeOpI74o-BeIbmA9Syf_RQMeyP6ofgsnXhTapgh78r2cLQcf4Oj-2FOAFaMCK2h-0/exec';
-
             const toolGrid = document.getElementById('tool-grid');
 
-            // --- 2. 獲取資料並建立卡片 ---
             async function loadTools() {
                 try {
                     const response = await fetch(WEB_APP_URL);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const tools = await response.json();
-
-                    toolGrid.innerHTML = ''; // 清空 "載入中..." 訊息
+                    
+                    toolGrid.innerHTML = '';
                     if (tools.length === 0) {
                         toolGrid.innerHTML = '<h2 style="text-align: center; grid-column: 1 / -1;">找不到工具資料。</h2>';
                         return;
                     }
 
                     tools.forEach(tool => {
-                        // --- 條件化建立「學習手冊」按鈕 ---
                         let manualButtonHTML = '';
                         if (tool.ManualURL && tool.ManualURL.trim() !== '') {
                             manualButtonHTML = `
                                 <div class="button-wrap">
                                     <button onclick="window.open('${tool.ManualURL}', '_blank')"><span>學習手冊</span></button>
-                                </div>
-                            `;
+                                </div>`;
                         }
 
-                        // 建立卡片 HTML
+                        // 將 interactive-card class 添加到所有卡片上
                         const cardHTML = `
                             <div class="tool-card glass-container interactive-card" data-category="${tool.Category}">
-                                <div class="glass-filter"></div>
-                                <div class="glass-overlay"></div>
-                                <div class="glass-specular"></div>
+                                <div class="glass-filter"></div><div class="glass-overlay"></div><div class="glass-specular"></div>
                                 <div class="card-content">
                                     <h4 class="tool-name">${tool.Name}</h4>
                                     <p class="tool-description">${tool.Description}</p>
@@ -213,25 +210,21 @@
                                         ${manualButtonHTML}
                                     </div>
                                 </div>
-                            </div>
-                        `;
+                            </div>`;
                         toolGrid.insertAdjacentHTML('beforeend', cardHTML);
                     });
                     
-                    // 資料載入後，初始化篩選功能
                     initializeFiltering();
-
                 } catch (error) {
                     console.error('Error fetching tools:', error);
                     toolGrid.innerHTML = '<h2 style="text-align: center; grid-column: 1 / -1;">無法載入工具資料，請檢查 API 設定或網路連線。</h2>';
                 }
             }
-
-            // --- 3. 篩選功能 ---
+            
             function initializeFiltering() {
                 const filterContainer = document.getElementById('tool-filters');
                 const searchInput = document.getElementById('search-input');
-                const toolCards = document.querySelectorAll('.tool-card'); // 現在可以安全地獲取卡片了
+                const toolCards = document.querySelectorAll('.tool-card'); 
 
                 function filterAndSearchTools() {
                     const searchTerm = searchInput.value.toLowerCase().trim();
@@ -241,10 +234,8 @@
                     toolCards.forEach(card => {
                         const category = card.dataset.category;
                         const cardText = card.textContent.toLowerCase();
-
                         const filterMatch = (activeFilter === 'all' || category === activeFilter);
                         const searchMatch = (searchTerm === '' || cardText.includes(searchTerm));
-
                         card.style.display = (filterMatch && searchMatch) ? 'flex' : 'none';
                     });
                 }
@@ -267,10 +258,9 @@
                     searchInput.addEventListener('input', filterAndSearchTools);
                 }
                 
-                filterAndSearchTools(); // 初始篩選
+                filterAndSearchTools();
             }
 
-            // --- 啟動！ ---
             loadTools();
         });
     </script>
